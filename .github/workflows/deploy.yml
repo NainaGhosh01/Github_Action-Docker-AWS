@@ -7,11 +7,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the repository
+      # 1. Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v2
 
-      # Step 2: Configure AWS Credentials from GitHub Secrets
+      # 2. Configure AWS Credentials from GitHub Secrets
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -19,7 +19,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Step 3: Install Elastic Beanstalk CLI (EB CLI)
+      # 3. Install the Elastic Beanstalk CLI (EB CLI)
       - name: Install AWS Elastic Beanstalk CLI (EB CLI)
         run: |
           sudo apt-get update -y
@@ -27,32 +27,43 @@ jobs:
           pip3 install awsebcli --upgrade --user
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # Step 4: Create or Confirm ECR Repository (handles error if repo not found)
+      # 4. Create or Confirm the ECR Repository
       - name: Create or Confirm ECR Repository
         run: |
           if ! aws ecr describe-repositories --repository-names my-web-app --region us-east-1; then
             echo "ECR repository 'my-web-app' not found. Creating repository..."
             aws ecr create-repository --repository-name my-web-app --region us-east-1
-            # Wait a few seconds to ensure the repository is ready
             sleep 10
           else
             echo "ECR repository 'my-web-app' exists."
           fi
 
-      # Step 5: Login to AWS ECR
+      # 5. Login to AWS ECR
       - name: Login to AWS ECR
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 724772070195.dkr.ecr.us-east-1.amazonaws.com
 
-      # Step 6: Build and Push Docker Image
+      # 6. Build and Push the Docker Image
       - name: Build and Push Docker Image
         run: |
           docker build -t my-web-app .
           docker tag my-web-app:latest 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
           docker push 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
 
-      # Step 7: Deploy to Elastic Beanstalk
+      # 7. Deploy to Elastic Beanstalk
       - name: Deploy to Elastic Beanstalk
         run: |
           eb init -p docker my-web-app --region us-east-1
+          # Try deploying first
+          set +e
           eb deploy my-web-app-env
+          DEPLOY_EXIT_CODE=$?
+          set -e
+          # If deployment fails, terminate and recreate the environment, then deploy again
+          if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
+            echo "Deployment failed (exit code $DEPLOY_EXIT_CODE). Terminating and recreating environment..."
+            eb terminate my-web-app-env --force
+            sleep 30
+            eb create my-web-app-env --elb-type application
+            eb deploy my-web-app-env
+          fi
