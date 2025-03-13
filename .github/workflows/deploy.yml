@@ -39,7 +39,14 @@ jobs:
           docker tag my-web-app:latest 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
           docker push 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
 
-      - name: Deploy to Elastic Beanstalk
+      - name: Set Up and Deploy to Elastic Beanstalk
         run: |
           eb init -p docker my-web-app --region us-east-1
-          eb deploy
+          if eb list | grep -q "my-web-app-env"; then
+            echo "Environment exists, using it."
+          else
+            echo "Environment does not exist, creating it."
+            eb create my-web-app-env --region us-east-1
+          fi
+          eb use my-web-app-env
+          eb deploy my-web-app-env
