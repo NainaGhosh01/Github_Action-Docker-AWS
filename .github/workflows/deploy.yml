@@ -24,7 +24,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build -t my-web-app .
-          docker tag my-web-app:latest <aws_account_id>.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
+          docker tag my-web-app:latest 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
           docker push 724772070195.dkr.ecr.us-east-1.amazonaws.com/my-web-app:latest
 
       - name: Deploy to Elastic Beanstalk
