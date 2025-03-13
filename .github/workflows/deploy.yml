@@ -46,16 +46,26 @@ jobs:
       - name: Set Up and Deploy to Elastic Beanstalk
         run: |
           eb init -p docker my-web-app --region us-east-1
+          
+          # Check if environment exists
           if eb list | grep -q "my-web-app-env"; then
-            echo "Environment exists, using it."
-            eb use my-web-app-env
+            STATUS=$(eb status my-web-app-env | grep Status | awk '{print $2}')
+            if [ "$STATUS" != "Ready" ]; then
+              echo "Environment is in an invalid state. Deleting and recreating..."
+              eb terminate my-web-app-env --force
+              eb create my-web-app-env --region us-east-1 --elb-type application
+            else
+              echo "Environment exists and is ready."
+              eb use my-web-app-env
+            fi
           else
             echo "Environment does not exist, creating it."
             eb create my-web-app-env --region us-east-1 --elb-type application
           fi
+          
           eb deploy my-web-app-env
 
-      - name: Check Elastic Beanstalk Logs
+      - name: Check Elastic Beanstalk Logs on Failure
         if: failure()
         run: |
-          eb logs my-web-app-env
+          eb logs my-web-app-env || echo "Environment not in a valid state to fetch logs"
