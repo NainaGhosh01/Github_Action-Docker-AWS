@@ -17,6 +17,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      - name: Install AWS Elastic Beanstalk CLI (EB CLI)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-pip
+          pip3 install awsebcli --upgrade --user
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
       - name: Create ECR Repository (If Not Exists)
         run: |
           aws ecr describe-repositories --repository-names my-web-app --region us-east-1 || \
