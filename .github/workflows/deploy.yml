@@ -1,0 +1,45 @@
+name: Deploy to AWS Elastic Beanstalk
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install AWS Elastic Beanstalk CLI (EB CLI)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-pip zip
+          pip3 install awsebcli --upgrade --user
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Package Application
+        run: |
+          zip -r application.zip . -x "*.git*"
+
+      - name: Deploy to AWS Elastic Beanstalk
+        env:
+          AWS_REGION: us-east-1
+          APPLICATION_NAME: my-web-app
+          ENVIRONMENT_NAME: my-web-app-env
+          VERSION_LABEL: "v-${{ github.sha }}"
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name $APPLICATION_NAME \
+            --version-label $VERSION_LABEL \
+            --source-bundle S3Bucket=my-beanstalk-bucket,S3Key=application.zip
+
+          aws elasticbeanstalk update-environment \
+            --environment-name $ENVIRONMENT_NAME \
+            --version-label $VERSION_LABEL
