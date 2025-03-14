@@ -38,7 +38,7 @@ jobs:
         env:
           AWS_REGION: us-east-1
           APPLICATION_NAME: my-web-app
-          ENVIRONMENT_NAME: my-web-app-env
+          ENVIRONMENT_NAME: my-web-app-env-1
           VERSION_LABEL: "v-${{ github.sha }}"
           S3_BUCKET: my-app-bucket2101  # <-- Ensure this matches the upload step
         run: |
